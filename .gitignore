@@ -1,5 +1,10 @@
 # Build output
 target/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.pnpm-cache/
+frontend/*.tsbuildinfo
 
 # Local secrets and developer configuration
 .env

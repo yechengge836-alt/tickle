@@ -55,3 +55,23 @@ Content-Type: application/json
 ## 当前边界与下一步
 
 这是教学型 MVP，不含登录鉴权、支付、超时取消、库存预热管理后台、Kafka 重试/DLQ 和分布式事务 Outbox。生产化时，建议优先增加 Outbox 表、消费者幂等记录、限流与压测脚本。
+# Ticket Platform
+
+## 前端展示页
+
+项目包含一个面向用户的活动购票展示页，位于 `frontend/`。它会通过 Vite 开发代理访问当前 Spring Boot 服务的 `4154` 端口，因此不需要额外配置跨域。
+
+先启动基础服务和后端，再在另一个 PowerShell 窗口运行：
+
+```powershell
+cd frontend
+pnpm install
+pnpm dev
+```
+
+浏览器访问 `http://127.0.0.1:5173`。页面支持：
+
+- 加载活动详情与实时余票；
+- 输入用户 ID、调整数量并提交购票请求；
+- 下单成功后自动刷新库存；
+- 当后端未启动时展示可交互的演示数据。
