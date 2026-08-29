@@ -1,0 +1,13 @@
+# Build output
+target/
+
+# Local secrets and developer configuration
+.env
+*.log
+
+# IDE and OS files
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,32 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  application:
+    name: campus-ticket-platform
+  datasource:
+    url: jdbc:mysql://localhost:3307/ticket_platform?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: root
+    password: ${MYSQL_PASSWORD}
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: ticket-notification-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.liushuai.ticket.order
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        enable.idempotence: true
+server:
+  port: 4154
+logging:
+  level:
+    com.liushuai.ticket: INFO
