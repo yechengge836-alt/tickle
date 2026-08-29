@@ -133,6 +133,7 @@ export default function App() {
     try {
       const response = await fetch(`/api/v1/auth/${authMode === 'login' ? 'login' : 'register'}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }),
+        signal: AbortSignal.timeout(10000),
       })
       const result = (await response.json()) as ApiResult<LoginUser>
       if (!response.ok || result.code !== 0) throw new Error(result.message || '操作失败')
@@ -148,7 +149,7 @@ export default function App() {
       setAuthForm({ username: '', password: '' })
       setNotice(`欢迎回来，${result.data.username}！现在可以购买门票。`)
     } catch (error) {
-      setAuthMessage(error instanceof Error ? error.message : '操作失败，请稍后重试。')
+      setAuthMessage(error instanceof DOMException && error.name === 'TimeoutError' ? '后端未响应，请确认 Spring Boot 已成功启动。' : error instanceof Error ? error.message : '操作失败，请稍后重试。')
     }
   }
 
@@ -214,7 +215,7 @@ export default function App() {
 
       <footer className="footer wrap"><a className="brand" href="#top"><span>CP</span> Campus Pass</a><p>校园文化节票务平台 · 以可靠技术承接每一次热爱</p><span>© 2026</span></footer>
       {authOpen && <div className="auth-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-title">
-        <form className="auth-modal" onSubmit={submitAuth}>
+        <form className="auth-modal" onSubmit={submitAuth} noValidate>
           <button className="modal-close" type="button" onClick={() => setAuthOpen(false)} aria-label="关闭"><X size={19} /></button>
           <p className="eyebrow">CAMPUS PASS ACCOUNT</p>
           <h2 id="auth-title">{authMode === 'login' ? '欢迎回来' : '创建账号'}</h2>
