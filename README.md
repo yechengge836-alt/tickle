@@ -75,3 +75,14 @@ pnpm dev
 - 输入用户 ID、调整数量并提交购票请求；
 - 下单成功后自动刷新库存；
 - 当后端未启动时展示可交互的演示数据。
+
+## 登录与注册
+
+页面右上角提供“登录 / 注册”。账号和密码均限制为 6–19 个字符；注册成功后需要使用该账号登录，购票时会自动使用已登录用户。
+
+密码仅以 BCrypt 摘要形式保存在 MySQL。后端启动时会自动创建 `platform_user` 表；如果希望在 MySQL Workbench 中立即同步，也可以执行 `sql/002-user-auth.sql`。
+
+接口：
+
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`

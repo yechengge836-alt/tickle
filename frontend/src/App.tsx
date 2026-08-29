@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import {
   ArrowRight,
   CalendarDays,
   CheckCircle2,
   Clock3,
   LoaderCircle,
+  LogIn,
   MapPin,
   Minus,
   Plus,
@@ -12,7 +13,9 @@ import {
   ShieldCheck,
   Sparkles,
   Ticket,
+  UserRound,
   Users,
+  X,
 } from 'lucide-react'
 
 type Activity = {
@@ -26,6 +29,7 @@ type Activity = {
 }
 
 type ApiResult<T> = { code: number; message: string; data: T }
+type LoginUser = { id: number; username: string; createdAt: string; accessToken: string }
 
 const demoActivity: Activity = {
   id: 1,
@@ -46,7 +50,13 @@ const toTime = (value: string) =>
 export default function App() {
   const [activity, setActivity] = useState<Activity>(demoActivity)
   const [quantity, setQuantity] = useState(1)
-  const [userId, setUserId] = useState('10001')
+  const [currentUser, setCurrentUser] = useState<LoginUser | null>(() => {
+    try { return JSON.parse(localStorage.getItem('ticket-platform-user') ?? 'null') as LoginUser | null } catch { return null }
+  })
+  const [authOpen, setAuthOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
+  const [authForm, setAuthForm] = useState({ username: '', password: '' })
+  const [authMessage, setAuthMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isBooking, setIsBooking] = useState(false)
   const [isDemo, setIsDemo] = useState(false)
@@ -81,8 +91,10 @@ export default function App() {
   }, [])
 
   const bookTicket = async () => {
-    if (!/^[1-9]\d*$/.test(userId)) {
-      setNotice('请填写有效的用户 ID（正整数）。')
+    if (!currentUser) {
+      setAuthMode('login')
+      setAuthMessage('购票前请先登录。没有账号请先注册。')
+      setAuthOpen(true)
       return
     }
     setIsBooking(true)
@@ -90,10 +102,10 @@ export default function App() {
     try {
       const response = await fetch('/api/v1/ticket-orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Auth-Token': currentUser.accessToken },
         body: JSON.stringify({
           activityId: activity.id,
-          userId: Number(userId),
+          userId: currentUser.id,
           quantity,
           requestId: crypto.randomUUID(),
         }),
@@ -109,12 +121,50 @@ export default function App() {
     }
   }
 
+  const submitAuth = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const username = authForm.username.trim()
+    const password = authForm.password
+    if (username.length < 6 || username.length > 19 || password.length < 6 || password.length > 19) {
+      setAuthMessage('账号和密码都必须为 6–19 个字符。')
+      return
+    }
+    setAuthMessage('')
+    try {
+      const response = await fetch(`/api/v1/auth/${authMode === 'login' ? 'login' : 'register'}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }),
+      })
+      const result = (await response.json()) as ApiResult<LoginUser>
+      if (!response.ok || result.code !== 0) throw new Error(result.message || '操作失败')
+      if (authMode === 'register') {
+        setAuthMode('login')
+        setAuthForm({ username, password: '' })
+        setAuthMessage('注册成功，请使用刚创建的账号登录。')
+        return
+      }
+      setCurrentUser(result.data)
+      localStorage.setItem('ticket-platform-user', JSON.stringify(result.data))
+      setAuthOpen(false)
+      setAuthForm({ username: '', password: '' })
+      setNotice(`欢迎回来，${result.data.username}！现在可以购买门票。`)
+    } catch (error) {
+      setAuthMessage(error instanceof Error ? error.message : '操作失败，请稍后重试。')
+    }
+  }
+
+  const logout = () => {
+    localStorage.removeItem('ticket-platform-user')
+    setCurrentUser(null)
+    setNotice('已退出登录。再次购票前需要重新登录。')
+  }
+
   return (
     <main>
       <nav className="nav wrap" aria-label="主导航">
         <a className="brand" href="#top" aria-label="Campus Pass 首页"><span>CP</span> Campus Pass</a>
         <div className="nav-links"><a href="#event">精选活动</a><a href="#how">购票说明</a></div>
-        <a className="nav-cta" href="#ticket">我的票券 <ArrowRight size={15} /></a>
+        {currentUser ? <button className="nav-account" onClick={logout} title="点击退出登录"><UserRound size={15} /> {currentUser.username} · 退出</button> :
+          <button className="nav-cta" onClick={() => { setAuthMode('login'); setAuthMessage(''); setAuthOpen(true) }}><LogIn size={15} /> 登录 / 注册</button>}
       </nav>
 
       <section id="top" className="hero wrap">
@@ -152,7 +202,7 @@ export default function App() {
         <div className="ticket-panel">
           <div className="ticket-panel-head"><div><span className="panel-kicker">电子入场券</span><h3>开幕演出 · 普通票</h3></div><span className="price">¥ <b>0</b></span></div>
           <div className="stock-block"><div className="stock-label"><span><Users size={16} /> 还剩 <b>{activity.availableStock.toLocaleString()}</b> 张</span><span>已售 {soldRate}%</span></div><div className="progress"><i style={{ width: `${Math.max(soldRate, 2)}%` }} /></div></div>
-          <label className="field-label">购票用户 ID<input value={userId} onChange={(event) => setUserId(event.target.value)} inputMode="numeric" placeholder="例如：10001" /></label>
+          <label className="field-label">当前购票账号<input value={currentUser ? `${currentUser.username}（ID: ${currentUser.id}）` : '请先登录后购票'} disabled /></label>
           <div className="quantity-row"><span>购票数量</span><div className="stepper"><button onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="减少数量"><Minus size={16} /></button><b>{quantity}</b><button onClick={() => setQuantity((value) => Math.min(5, value + 1))} aria-label="增加数量"><Plus size={16} /></button></div></div>
           <button className="buy-button" onClick={() => void bookTicket()} disabled={isBooking || activity.availableStock < quantity}>{isBooking ? <><LoaderCircle className="spin" size={18} /> 正在锁定座位</> : <>确认购票 <ArrowRight size={18} /></>}</button>
           <p className="secure-note"><ShieldCheck size={15} /> 订单受幂等保护，请勿重复提交</p>
@@ -163,6 +213,20 @@ export default function App() {
       <section id="how" className="how-section wrap"><div><p className="eyebrow">HOW IT WORKS</p><h2>简单三步，<br />奔赴现场。</h2></div><div className="steps"><div><b>01</b><h3>选择活动</h3><p>实时查看演出时间和剩余门票。</p></div><div><b>02</b><h3>安全锁票</h3><p>系统以原子扣减保护每一张票。</p></div><div><b>03</b><h3>领取票券</h3><p>支付确认后，在我的票券查看。</p></div></div></section>
 
       <footer className="footer wrap"><a className="brand" href="#top"><span>CP</span> Campus Pass</a><p>校园文化节票务平台 · 以可靠技术承接每一次热爱</p><span>© 2026</span></footer>
+      {authOpen && <div className="auth-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <form className="auth-modal" onSubmit={submitAuth}>
+          <button className="modal-close" type="button" onClick={() => setAuthOpen(false)} aria-label="关闭"><X size={19} /></button>
+          <p className="eyebrow">CAMPUS PASS ACCOUNT</p>
+          <h2 id="auth-title">{authMode === 'login' ? '欢迎回来' : '创建账号'}</h2>
+          <p className="auth-intro">{authMode === 'login' ? '登录后即可安全锁定你的演出门票。' : '注册完成后，请使用该账号登录。'}</p>
+          <label>账号<input value={authForm.username} onChange={(event) => setAuthForm({ ...authForm, username: event.target.value })} minLength={6} maxLength={19} required placeholder="6–19 个字符" autoComplete="username" /></label>
+          <label>密码<input type="password" value={authForm.password} onChange={(event) => setAuthForm({ ...authForm, password: event.target.value })} minLength={6} maxLength={19} required placeholder="6–19 个字符" autoComplete={authMode === 'login' ? 'current-password' : 'new-password'} /></label>
+          {authMessage && <p className="auth-message">{authMessage}</p>}
+          <button className="buy-button" type="submit">{authMode === 'login' ? '登录并继续' : '注册账号'} <ArrowRight size={18} /></button>
+          <button className="auth-switch" type="button" onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthMessage('') }}>{authMode === 'login' ? '没有账号？先注册' : '已有账号？去登录'}</button>
+          <small>账号与密码均限制为 6–19 个字符。</small>
+        </form>
+      </div>}
     </main>
   )
 }
