@@ -1,4 +1,6 @@
+// 导入 React 状态、生命周期、派生数据钩子和表单事件类型。
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+// 导入页面各区域使用的图标组件。
 import {
   ArrowRight,
   CalendarDays,
@@ -18,19 +20,30 @@ import {
   X,
 } from 'lucide-react'
 
+// 定义后端活动详情接口的数据形状。
 type Activity = {
+  // 活动唯一标识。
   id: number
+  // 活动名称。
   name: string
+  // 初始化总库存。
   totalStock: number
+  // 当前剩余可售库存。
   availableStock: number
+  // 当前售票状态。
   status: string
+  // 活动开始时间的 ISO 字符串。
   startAt: string
+  // 活动结束时间的 ISO 字符串。
   endAt: string
 }
 
+// 定义后端统一响应的泛型结构。
 type ApiResult<T> = { code: number; message: string; data: T }
+// 定义登录成功后存入浏览器的用户和令牌信息。
 type LoginUser = { id: number; username: string; createdAt: string; accessToken: string }
 
+// 后端离线时仍可展示页面的回退活动数据。
 const demoActivity: Activity = {
   id: 1,
   name: '2026 校园文化节开幕演出',
@@ -41,32 +54,48 @@ const demoActivity: Activity = {
   endAt: '2026-09-15T22:00:00',
 }
 
+// 将 ISO 时间转换为中文的“月 日 星期”格式。
 const toCnDate = (value: string) =>
   new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(value))
 
+// 将 ISO 时间转换为 24 小时制的时分格式。
 const toTime = (value: string) =>
   new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value))
 
+// 定义票务平台页面的根组件。
 export default function App() {
+  // 保存当前展示的活动数据。
   const [activity, setActivity] = useState<Activity>(demoActivity)
+  // 保存用户选择的购票数量。
   const [quantity, setQuantity] = useState(1)
+  // 从 localStorage 恢复上次成功登录的用户；解析失败时安全地视为未登录。
   const [currentUser, setCurrentUser] = useState<LoginUser | null>(() => {
     try { return JSON.parse(localStorage.getItem('ticket-platform-user') ?? 'null') as LoginUser | null } catch { return null }
   })
+  // 控制登录/注册弹窗是否显示。
   const [authOpen, setAuthOpen] = useState(false)
+  // 记录弹窗当前处于登录还是注册模式。
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
+  // 保存认证表单的账号和密码输入值。
   const [authForm, setAuthForm] = useState({ username: '', password: '' })
+  // 保存认证表单内的校验或接口反馈。
   const [authMessage, setAuthMessage] = useState('')
+  // 标记活动接口是否正在加载。
   const [isLoading, setIsLoading] = useState(true)
+  // 标记下单请求是否正在执行，防止重复点击。
   const [isBooking, setIsBooking] = useState(false)
+  // 标记是否正在使用本地演示活动数据。
   const [isDemo, setIsDemo] = useState(false)
+  // 保存页面级别的成功、失败和提示信息。
   const [notice, setNotice] = useState('')
 
+  // 根据总库存和剩余库存计算已售百分比。
   const soldRate = useMemo(() => {
     if (!activity.totalStock) return 0
     return Math.min(100, Math.round(((activity.totalStock - activity.availableStock) / activity.totalStock) * 100))
   }, [activity])
 
+  // 从 Spring Boot 后端加载活动详情；不可用时降级为演示数据。
   const loadActivity = async () => {
     setIsLoading(true)
     setNotice('')
@@ -86,10 +115,12 @@ export default function App() {
     }
   }
 
+  // 页面首次挂载后自动加载真实活动。
   useEffect(() => {
     void loadActivity()
   }, [])
 
+  // 发起购票请求，并在必要时要求用户先登录。
   const bookTicket = async () => {
     if (!currentUser) {
       setAuthMode('login')
@@ -121,6 +152,7 @@ export default function App() {
     }
   }
 
+  // 处理登录或注册表单提交。
   const submitAuth = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const username = authForm.username.trim()
@@ -153,14 +185,17 @@ export default function App() {
     }
   }
 
+  // 清除本地会话并回到未登录状态。
   const logout = () => {
     localStorage.removeItem('ticket-platform-user')
     setCurrentUser(null)
     setNotice('已退出登录。再次购票前需要重新登录。')
   }
 
+  // 渲染整个票务展示、购票和认证界面。
   return (
     <main>
+      {/* 顶部导航：品牌、锚点链接与账号入口。 */}
       <nav className="nav wrap" aria-label="主导航">
         <a className="brand" href="#top" aria-label="Campus Pass 首页"><span>CP</span> Campus Pass</a>
         <div className="nav-links"><a href="#event">精选活动</a><a href="#how">购票说明</a></div>
@@ -168,6 +203,7 @@ export default function App() {
           <button className="nav-cta" onClick={() => { setAuthMode('login'); setAuthMessage(''); setAuthOpen(true) }}><LogIn size={15} /> 登录 / 注册</button>}
       </nav>
 
+      {/* 首屏横幅：展示项目品牌和活动氛围。 */}
       <section id="top" className="hero wrap">
         <div className="hero-copy">
           <p className="eyebrow"><Sparkles size={15} /> CAMPUS PASS PRESENTS</p>
@@ -184,6 +220,7 @@ export default function App() {
         </div>
       </section>
 
+      {/* 活动详情区：展示后端加载的活动时间、地点和余票。 */}
       <section id="event" className="event-section wrap">
         <div className="section-heading"><p className="eyebrow">FEATURED EVENT</p><h2>今夜，校园不设静音。</h2></div>
         <article className="event-card">
@@ -198,6 +235,7 @@ export default function App() {
         </article>
       </section>
 
+      {/* 购票区：包含库存进度、数量选择器和下单按钮。 */}
       <section id="ticket" className="purchase-section wrap">
         <div className="purchase-copy"><p className="eyebrow">GET YOUR PASS</p><h2>把位置留给<br /><em>此刻的你。</em></h2><p>下单后系统将进行库存锁定，避免超卖。订单将在有效时间内等待支付确认。</p><div className="mini-stats"><div><b>100%</b><span>库存同步</span></div><div><b>24/7</b><span>服务可用</span></div><div><b>1s</b><span>极速锁票</span></div></div></div>
         <div className="ticket-panel">
@@ -211,9 +249,12 @@ export default function App() {
         </div>
       </section>
 
+      {/* 说明购票流程的三步指引。 */}
       <section id="how" className="how-section wrap"><div><p className="eyebrow">HOW IT WORKS</p><h2>简单三步，<br />奔赴现场。</h2></div><div className="steps"><div><b>01</b><h3>选择活动</h3><p>实时查看演出时间和剩余门票。</p></div><div><b>02</b><h3>安全锁票</h3><p>系统以原子扣减保护每一张票。</p></div><div><b>03</b><h3>领取票券</h3><p>支付确认后，在我的票券查看。</p></div></div></section>
 
+      {/* 页面底部的品牌与版权信息。 */}
       <footer className="footer wrap"><a className="brand" href="#top"><span>CP</span> Campus Pass</a><p>校园文化节票务平台 · 以可靠技术承接每一次热爱</p><span>© 2026</span></footer>
+      {/* 仅在 authOpen 为 true 时渲染登录/注册模态框。 */}
       {authOpen && <div className="auth-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-title">
         <form className="auth-modal" onSubmit={submitAuth} noValidate>
           <button className="modal-close" type="button" onClick={() => setAuthOpen(false)} aria-label="关闭"><X size={19} /></button>

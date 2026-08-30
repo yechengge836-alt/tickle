@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Maven POM 使用 XML 1.0 与 UTF-8 编码；以下是项目根元素和 schema 定义。 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <!-- 使用 Maven POM 4.0.0 模型。 -->
     <modelVersion>4.0.0</modelVersion>
+    <!-- 继承 Spring Boot 的依赖版本和常用构建配置。 -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -13,16 +16,35 @@
     <version>0.0.1-SNAPSHOT</version>
     <name>campus-ticket-platform</name>
     <description>Campus festival distributed ticketing platform</description>
-    <properties><java.version>17</java.version></properties>
+    <!-- 集中保存构建属性。 -->
+    <properties>
+        <!-- 后端源码与运行时使用 Java 17。 -->
+        <java.version>17</java.version>
+    </properties>
+    <!-- 声明应用运行、存储和测试所需依赖。 -->
     <dependencies>
+        <!-- 提供 REST API 和内嵌 Web 服务器。 -->
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
+        <!-- 提供请求参数校验能力。 -->
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-validation</artifactId></dependency>
+        <!-- 提供 JdbcClient 访问 MySQL。 -->
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-jdbc</artifactId></dependency>
+        <!-- 提供 BCrypt 密码哈希工具。 -->
         <dependency><groupId>org.springframework.security</groupId><artifactId>spring-security-crypto</artifactId></dependency>
+        <!-- 提供 Redis 缓存和会话访问能力。 -->
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-data-redis</artifactId></dependency>
+        <!-- 提供 Kafka 订单事件收发能力。 -->
         <dependency><groupId>org.springframework.kafka</groupId><artifactId>spring-kafka</artifactId></dependency>
+        <!-- 仅在运行时加载 MySQL JDBC 驱动。 -->
         <dependency><groupId>com.mysql</groupId><artifactId>mysql-connector-j</artifactId><scope>runtime</scope></dependency>
+        <!-- 仅在测试阶段提供 Spring Boot 测试工具。 -->
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
     </dependencies>
-    <build><plugins><plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin></plugins></build>
+    <!-- 配置 Maven 构建插件。 -->
+    <build>
+        <plugins>
+            <!-- 让 Maven 能运行和打包 Spring Boot 应用。 -->
+            <plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin>
+        </plugins>
+    </build>
 </project>

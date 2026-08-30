@@ -1,32 +1,64 @@
+# Spring Boot 的主配置分组。
 spring:
+  # 配置来源相关设置。
   config:
+    # 可选读取项目根目录的 .env 属性文件，用于本地密码等敏感配置。
     import: optional:file:.env[.properties]
+  # 应用自身信息。
   application:
+    # 在日志、监控中使用的应用名称。
     name: campus-ticket-platform
+  # MySQL 数据源配置。
   datasource:
+    # 连接 Docker 映射到本机 3307 端口的 ticket_platform 数据库。
     url: jdbc:mysql://localhost:3307/ticket_platform?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    # 本地 Docker MySQL 的管理账号。
     username: root
+    # 从 .env 或系统环境变量读取密码，避免写死在版本库中。
     password: ${MYSQL_PASSWORD}
+  # Spring Data 的相关配置。
   data:
+    # Redis 缓存连接配置。
     redis:
+      # Redis 服务主机。
       host: localhost
+      # Redis 默认端口。
       port: 6379
+  # Kafka 消息队列配置。
   kafka:
+    # 本地 Docker Kafka 的对外地址。
     bootstrap-servers: localhost:9092
+    # Kafka 消费者配置。
     consumer:
+      # 通知消费者所属的消费组。
       group-id: ticket-notification-group
+      # 首次消费组没有位点时从最早消息开始读取。
       auto-offset-reset: earliest
+      # Kafka 消息键的反序列化器。
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      # 订单事件 JSON 的反序列化器。
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      # 传递给反序列化器的附加参数。
       properties:
+        # 仅信任本项目的订单事件包，防止不安全的类型反序列化。
         spring.json.trusted.packages: com.liushuai.ticket.order
+    # Kafka 生产者配置。
     producer:
+      # Kafka 消息键序列化器。
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # 订单事件 JSON 序列化器。
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      # 传递给生产者的附加参数。
       properties:
+        # 开启幂等生产，降低网络重试造成重复消息的风险。
         enable.idempotence: true
+ # Web 服务器配置。
 server:
+  # 后端 API 监听端口，前端 Vite 会代理 /api 到该端口。
   port: 4154
+ # 日志配置。
 logging:
+  # 按包设置日志级别。
   level:
+    # 输出项目自身 INFO 及以上日志。
     com.liushuai.ticket: INFO

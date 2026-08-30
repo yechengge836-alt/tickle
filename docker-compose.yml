@@ -1,27 +1,52 @@
+# 定义本地开发依赖的容器服务。
 services:
+  # MySQL 负责保存活动、订单和用户数据。
   mysql:
+    # 采用 MySQL 8.4 镜像。
     image: mysql:8.4
+    # 初始化数据库所需环境变量。
     environment:
+      # 从同目录 .env 读取 root 密码。
       MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      # 容器第一次启动时创建的数据库名称。
       MYSQL_DATABASE: ticket_platform
-    # Host 3306 is commonly occupied by a local MySQL installation.
+    # 宿主机 3306 常被本地 MySQL 占用，因此映射到 3307。
     ports: ["3307:3306"]
+    # 只读挂载初始化 SQL，首次创建数据卷时由镜像自动执行。
     volumes: ["./sql:/docker-entrypoint-initdb.d:ro"]
+  # Redis 保存库存缓存和登录会话。
   redis:
+    # 使用体积小的 Redis Alpine 镜像。
     image: redis:7.4-alpine
+    # 暴露 Redis 默认端口到宿主机。
     ports: ["6379:6379"]
+  # ZooKeeper 为本地 Kafka 单节点提供协调服务。
   zookeeper:
+    # 使用与 Kafka 匹配版本的 Confluent ZooKeeper 镜像。
     image: confluentinc/cp-zookeeper:7.7.1
+    # 设置 ZooKeeper 客户端端口和基本心跳时间。
     environment: { ZOOKEEPER_CLIENT_PORT: 2181, ZOOKEEPER_TICK_TIME: 2000 }
+  # Kafka 承载订单创建后的异步通知事件。
   kafka:
+    # 使用 Confluent Kafka 镜像。
     image: confluentinc/cp-kafka:7.7.1
+    # 确保 ZooKeeper 先被启动。
     depends_on: [zookeeper]
+    # 暴露供 Spring Boot 连接的本地端口。
     ports: ["9092:9092"]
+    # Kafka 单节点运行参数。
     environment:
+      # 单节点 broker ID。
       KAFKA_BROKER_ID: 1
+      # ZooKeeper 容器网络地址。
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # 定义容器内部与宿主机监听器的协议映射。
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      # 同时公布容器内地址和宿主机 localhost 地址。
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      # 单副本环境下内部 topic 的副本数。
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      # 事务状态日志最小同步副本数。
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      # 事务状态日志副本数，单节点必须设为 1。
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
